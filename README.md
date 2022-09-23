@@ -156,7 +156,7 @@ it be an undefined behavior? And the answet is... it won't even compile! There j
 method attached to iterators that don't have exact size. And all it because of
 superpowers that give to you Rust's _traits_!
 
-## How it works (todo)
+## How it works
 
 Let's start from simple and look at first two `impl` blocks of `Progress` struct:
 
