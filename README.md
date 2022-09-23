@@ -307,5 +307,5 @@ other languages, or you can do but the implementation and methods achieving this
 kind of behavior will be much messier. Also Rust is very fun to work with and it
 naturally motivates you to write beautiful and clean code.
 
-So, I hope this little essay ended up somewhat readable for someone else and only for
+So, I hope this little essay ended up somewhat readable for someone else and not only for
 me, I really tried.
