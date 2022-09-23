@@ -1,6 +1,6 @@
-# Type Driven Rust API
+# Type-Driven Rust API
 
-This project a simple example of type driven approach for designing an
+This project a simple example of type-driven approach for designing an
 API in Rust Language. At first glance it looks not that easy, especially if
 you don't familiar with Rust and it syntax and there is a lot of syntax that is
 specific only to Rust.
@@ -20,21 +20,21 @@ Firstly, let's ignore the first three lines of code in file `src/main.rs`, becau
 not related to the topic. So, first what you see in file is this:
 
 ```rust
-  struct Unbounded;
+struct Unbounded;
 
-  struct Bounded {
-      bound: usize,
-      delims: (char, char),
-  }
+struct Bounded {
+    bound: usize,
+    delims: (char, char),
+}
 
-  struct Progress<Iter, Bound> {
-      iter: Iter,
-      i: usize,
-      bound: Bound,
-  }
+struct Progress<Iter, Bound> {
+    iter: Iter,
+    i: usize,
+    bound: Bound,
+}
 ```
 
-First what you notice is the `Unbounded` struct. And yoy ask, why it don't have body
+First what you notice is the `Unbounded` struct. And you may ask, why it don't have body
 with fields? Is this allowed? Yes, it's allowed and in Rust this type of struct is
 called a `Unit struct`. Unit structs are most commonly used as marker. They have a
 size of zero bytes, but unlike empty enums they can be instantiated, making them
@@ -116,7 +116,7 @@ fn main() {
 [***  ]
 ```
 
-That's looks more like a progress bar, nice! But maybe i don't like square brackets
+That's looks more like a progress bar, nice! But maybe I don't like square brackets
 and what it to display bar with pipes? For this, we can add another method call, where
 in parameters we can pass desirable characters for bar delimiters `with_delims((char, char))`:
 
@@ -157,3 +157,155 @@ method attached to iterators that don't have exact size. And all it because of
 superpowers that give to you Rust's _traits_!
 
 ## How it works (todo)
+
+Let's start from simple and look at first two `impl` blocks of `Progress` struct:
+
+```rust
+impl<Iter> Progress<Iter, Unbounded> {
+    pub fn new(iter: Iter) -> Self {
+        Self {
+            iter,
+            i: 0,
+            bound: Unbounded,
+        }
+    }
+}
+
+impl<Iter> Progress<Iter, Bounded> {
+    pub fn with_delims(mut self, delims: (char, char)) -> Self {
+        self.bound.delims = delims;
+        self
+    }
+}
+```
+
+Let's take it bit by bit. The `impl<Iter>` bit is saying that this `impl` block
+implemented all types of `Iter` and Iter isn't some concrete type name, it's a generic
+so it could be named like `T` or `Type` or _etc_.
+
+The `Progress<Iter, Unbounded>` bit is just attaches types `Iter` and `Unbounded` to
+`Progress` struct. And unlike `Iter`, `Unbounded` is a concrete type or more exactly _unit struct_, that we defined earlier. And inside the `impl` block is just a
+constructor function `new()` that takes as argument any type.
+
+The next `impl` block looks almost the same, only just with another function. But the
+only and key difference that instead of `Unbounded` type it has `Bounded`. And that means that the function `with_delims()` available only for those `Progress` instances that have the `Bounded` state. And that's why (partially) we can't call
+`with_delims()` method on iterators without exact size! But it the only first part
+why.
+
+And the other part of why we can't call `with_delims()` method on iterators without
+exact size is because of this `impl` block:
+
+```rust
+impl<Iter> Progress<Iter, Unbounded>
+where
+    Iter: ExactSizeIterator,
+{
+    pub fn with_bound(self) -> Progress<Iter, Bounded> {
+        let bound = Bounded {
+            bound: self.iter.len(),
+            delims: ('[', ']'),
+        };
+
+        Progress {
+            iter: self.iter,
+            i: self.i,
+            bound,
+        }
+    }
+}
+```
+
+It's looks a little bit more involved, but the only difference from first `impl` is
+the `where` clause. And line `where Iter: ExactSizeIterator` just means that the
+`with_bound()` method only available for those types that implemented [`ExactSizeIterator`](https://doc.rust-lang.org/std/iter/trait.ExactSizeIterator.html) trait. Pretty cool if you ask me.
+
+The next `impl` block looks like this:
+
+```rust
+impl<Iter, Bound> Iterator for Progress<Iter, Bound>
+where
+    Iter: Iterator,
+    Bound: ProgressDisplay,
+{
+    type Item = Iter::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        print!("{CLEAR}");
+        self.bound.display(&self);
+
+        self.i += 1;
+        self.iter.next()
+    }
+}
+```
+
+And there is some \`magic outside Hogwarts\`. So shortly, it's an implementation of
+[`Iterator`](https://doc.rust-lang.org/std/iter/trait.Iterator.html) trait defined in
+Rust's standard library. And by implementing it's required method `next()` the struct
+`Progress` can be turned into a iterator! And other thing about this is the `Bound`
+generic and `ProgressDisplay`.
+
+So, the line `Bound: ProgressDisplay` allow us to call `display()` method on `bound`
+field of `Progress` struct. And this method defined in `ProgressDisplay` trait allow
+us to implement different behaviors of `display()` function on different states of
+`Progress` struct. and the code that implements all of this:
+
+```rust
+trait ProgressDisplay: Sized {
+    fn display<Iter>(&self, progress: &Progress<Iter, Self>);
+}
+
+impl ProgressDisplay for Unbounded {
+    fn display<Iter>(&self, progress: &Progress<Iter, Self>) {
+        println!("{}", "*".repeat(progress.i))
+    }
+}
+
+impl ProgressDisplay for Bounded {
+    fn display<Iter>(&self, progress: &Progress<Iter, Self>) {
+        println!(
+            "{}{}{}{}",
+            self.delims.0,
+            "*".repeat(progress.i),
+            " ".repeat(progress.bound.bound - progress.i),
+            self.delims.1
+        )
+    }
+}
+```
+
+And the last thing we left to talk about is how with traits we can extend functionality
+of predefined public interfaces of standard library and pretty mach any library!
+
+Firstly, let's look at the code:
+
+```rust
+trait ProgressIteratorExt: Sized {
+    fn progress(self) -> Progress<Self, Unbounded>;
+}
+
+impl<Iter> ProgressIteratorExt for Iter
+where
+    Iter: Iterator,
+{
+    fn progress(self) -> Progress<Self, Unbounded> {
+        Progress::new(self)
+    }
+}
+```
+
+In beginning we defining the `ProgressIteratorExt` trait and associated method
+`progress`. Then, we implementing it for every type that implements the
+[`Iterator`](https://doc.rust-lang.org/std/iter/trait.Iterator.html) trait. And
+this allow us to make this call `vec![1, 2, 3].iter().progress()`. Pretty awesome
+if you ask me!
+
+## Conclusion
+
+I think Rust is very powerful tool that allow you do things that you can't do in
+other languages, or you can do but the implementation and methods achieving this
+kind of behavior will be much messier. Also Rust is very fun to work with and it
+naturally motivates you to write beautiful and clean code.
+
+So, I hope this little essay ended up somewhat readable for someone else and only for
+me, I really tried.
