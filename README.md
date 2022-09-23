@@ -5,14 +5,17 @@ API in Rust Language. At first glance it looks not that easy, especially if
 you don't familiar with Rust and it syntax and there is a lot of syntax that is
 specific only to Rust.
 
-I took this code from this awesome video: [_"Type-Driven API Design in Rust" by Will Crichton_](https://youtu.be/bnnacleqg6k). In this video author talks about, you
-guessed it, type-driven API and walks over all iterations of designing API from simple
+I took this code from this awesome video:
+[_"Type-Driven API Design in Rust" by Will Crichton_](https://youtu.be/bnnacleqg6k).
+In this video author talks about, you guessed it, type-driven API and walks
+over all iterations of designing API from simple
 generic function to stateful struct using traits and rich type-system of Rust.
 
-So, if you want to understand what is going on here, I recommend to go watch the video above. Because here, i first of all myself try to understand all the details by writing
-this blob of text and only after that make this blob understandable by other people.
-And if I achive both this targets, then I made a good job at understanding this design
-pattern, good me!
+So, if you want to understand what is going on here, I recommend to go watch
+the video above. Because here, I first of all trying to understand all the
+details myself by writing this blob of text and only after that make this
+blob understandable by other people. And if I achive both this targets, then
+I made a good job at understanding this design pattern, good me!
 
 ## Progress struct
 
@@ -43,7 +46,8 @@ trait on something, but don't need to store any data inside it. And that is exac
 purpose of `Unbounded` struct.
 
 Let's skip for now the `Bounded struct` and talk firstly about `Progress` struct. This
-is the main struct of this small project. And all what it does is printing to standard output a progress of iterator and it looks something like this:
+is the main struct of this small project. And all what it does is printing to standard
+output a progress of iterator and it looks something like this:
 
 ```console
 [***   ]
@@ -66,7 +70,7 @@ And for this exact behavior we have the `Bounded` struct (actually not only for 
 ## Using the Progress struct
 
 Before talking about the implementation of `Progress`, let's look at how you can use it
-in yout code. For exapmle, we have this simple program where we just iterating over
+in your code. For example, we have this simple program where we just iterating over
 vector of integers, doing some expensive calculations on it's values:
 
 ```rust
@@ -117,7 +121,7 @@ fn main() {
 ```
 
 That's looks more like a progress bar, nice! But maybe I don't like square brackets
-and what it to display bar with pipes? For this, we can add another method call, where
+and want it to display bar with pipes? For this, we can add another method call, where
 in parameters we can pass desirable characters for bar delimiters `with_delims((char, char))`:
 
 ```rust
@@ -153,7 +157,7 @@ fn main() {
 And that what I call an art! But if you familiar with Rust, you can ask, what about the
 unbounded ranges `(2..)`? What if I call `(2..)iter().progress().with_bound()`? Will
 it be an undefined behavior? And the answet is... it won't even compile! There just no
-method attached to iterators that don't have exact size. And all it because of
+method attached to iterators that don't have _exact size_. And all it because of
 superpowers that give to you Rust's _traits_!
 
 ## How it works
@@ -180,19 +184,21 @@ impl<Iter> Progress<Iter, Bounded> {
 ```
 
 Let's take it bit by bit. The `impl<Iter>` bit is saying that this `impl` block
-implemented all types of `Iter` and Iter isn't some concrete type name, it's a generic
+implement all types of `Iter`. And `Iter` isn't some concrete type name, it's a generic
 so it could be named like `T` or `Type` or _etc_.
 
 The `Progress<Iter, Unbounded>` bit is just attaches types `Iter` and `Unbounded` to
-`Progress` struct. And unlike `Iter`, `Unbounded` is a concrete type or more exactly _unit struct_, that we defined earlier. And inside the `impl` block is just a
+`Progress` struct. And unlike `Iter`, `Unbounded` is a concrete type or more exactly
+_unit struct_, that we defined earlier. And inside the `impl` block is just a
 constructor function `new()` that takes as argument any type.
 
-The next `impl` block looks almost the same, only just with another function. But the
-only and key difference that instead of `Unbounded` type it has `Bounded`. And that means that the function `with_delims()` available only for those `Progress` instances that have the `Bounded` state. And that's why (partially) we can't call
-`with_delims()` method on iterators without exact size! But it the only first part
-why.
+The next `impl` block looks almost the same, just with another function. But the
+key difference that instead of `Unbounded` type it has `Bounded`. And that means
+that the function `with_delims()` available only for those `Progress` instances
+that have the `Bounded` state. And that's why (partially) we can't call
+`with_delims()` method on iterators without exact size!
 
-And the other part of why we can't call `with_delims()` method on iterators without
+And another reason why we can't call `with_delims()` method on iterators without
 exact size is because of this `impl` block:
 
 ```rust
@@ -217,7 +223,9 @@ where
 
 It's looks a little bit more involved, but the only difference from first `impl` is
 the `where` clause. And line `where Iter: ExactSizeIterator` just means that the
-`with_bound()` method only available for those types that implemented [`ExactSizeIterator`](https://doc.rust-lang.org/std/iter/trait.ExactSizeIterator.html) trait. Pretty cool if you ask me.
+`with_bound()` method only available for those types that implement the
+[`ExactSizeIterator`](https://doc.rust-lang.org/std/iter/trait.ExactSizeIterator.html)
+trait. Pretty cool if you ask me.
 
 The next `impl` block looks like this:
 
@@ -248,7 +256,7 @@ generic and `ProgressDisplay`.
 So, the line `Bound: ProgressDisplay` allow us to call `display()` method on `bound`
 field of `Progress` struct. And this method defined in `ProgressDisplay` trait allow
 us to implement different behaviors of `display()` function on different states of
-`Progress` struct. and the code that implements all of this:
+`Progress` struct. And code that implements all of this:
 
 ```rust
 trait ProgressDisplay: Sized {
@@ -274,8 +282,8 @@ impl ProgressDisplay for Bounded {
 }
 ```
 
-And the last thing we left to talk about is how with traits we can extend functionality
-of predefined public interfaces of standard library and pretty mach any library!
+The last thing we left to talk about is how with traits we can extend functionality
+of predefined public interfaces of standard library and pretty much any library!
 
 Firstly, let's look at the code:
 
@@ -297,7 +305,7 @@ where
 In beginning we defining the `ProgressIteratorExt` trait and associated method
 `progress`. Then, we implementing it for every type that implements the
 [`Iterator`](https://doc.rust-lang.org/std/iter/trait.Iterator.html) trait. And
-this allow us to make this call `vec![1, 2, 3].iter().progress()`. Pretty awesome
+this allow us to make this call `vec![1, 2, 3].iter().progress()`. Pretty cool
 if you ask me!
 
 ## Conclusion
